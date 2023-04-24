@@ -1,3 +1,6 @@
+#include <stdarg.h>
+
+
 /**
  * print_char - Print a character
  * @types: List's arguments
