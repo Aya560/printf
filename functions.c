@@ -1,123 +1,139 @@
+#include "main.h"
 #include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
 
+#define UINT_MAX  (unsigned int)(~0)
+#define NULL_STRING "(null)"
 
 /**
- * print_char - Print a character
- * @types: List's arguments
- * @buffer: Buffer array to handle print
- * @flags: Evaluates effective flags
- * @width: Width
- * @precision: Precision guidelines
- * @size: Size specifier
+ * print_char - prints character
+ * @ap: argument pointer
+ * @params: the parameters struct
  *
- * Return: Number of characters printed
+ * Return: number chars printed
  */
-int print_char(va_list types, char buffer[],
-		int flags, int width, int precision, int size)
+int print_char(va_list ap, params_t *params)
 {
-	char c = va_arg(types, int);
+	char pad_char = ' ';
+	unsigned int pad = 1, sum = 0, ch = va_arg(ap, int);
 
-	return (handle_write_char(c, buffer, flags, width, precision, size));
+	if (params->minus_flag)
+		sum += _putchar(ch);
+	while (pad++ < params->width)
+		sum += _putchar(pad_char);
+	if (!params->minus_flag)
+		sum += _putchar(ch);
+	return (sum);
 }
 
 /**
- * print_string – Print a string
- * @types: List's arguments
- * @buffer: Buffer array to handle print
- * @flags: Evaluates effective flags
- * @width: Get width
- * @precision: Precision guidelines
- * @size: Size specifier
+ * print_int - prints integer
+ * @ap: argument pointer
+ * @params: the parameters struct
  *
- * Return: Number of characters printed
+ * Return: number chars printed
  */
-int print_string(va_list types, char buffer[],
-		int flags, int width, int precision, int size)
+int print_int(va_list ap, params_t *params)
 {
-	int length = 0, i;
-	char *str = va_arg(types, char *);
+	long l;
 
-	UNUSED(buffer);
-	UNUSED(flags);
-	UNUSED(precision);
-	UNUSED(size);
-	if (str == NULL)
+	if (params->l_modifier)
+		l = va_arg(ap, long);
+	else if (params->h_modifier)
+		l = (short int)va_arg(ap, int);
+	else
+		l = (int)va_arg(ap, int);
+	return (print_number(convert(l, 10, 0, params), params));
+}
+
+/**
+ * print_string - prints string
+ * @ap: argument pointer
+ * @params: the parameters struct
+ *
+ * Return: number chars printed
+ */
+int print_string(va_list ap, params_t *params)
+{
+	char *str = va_arg(ap, char *), pad_char = ' ';
+	unsigned int pad = 0, sum = 0, i = 0, j;
+
+	switch ((int)(!str))
 	{
-		str = "(null)";
-		if (precision >= 6)
-			str = "      ";
+	case 1:
+		str = NULL_STRING;
 	}
-	while (str[length] != '\0')
-		length++;
-	if (precision >= 0 && precision < length)
-		length = precision;
 
-	if (width > length)
+	j = pad = _strlen(str);
+	if (params->precision < pad)
+		j = pad = params->precision;
+
+	if (params->minus_flag)
 	{
-		if (flags & F_MINUS)
+		if (params->precision != UINT_MAX)
+			for (i = 0; i < pad; i++)
+				sum += _putchar(*str++);
+		else
+			sum += _puts(str);
+	}
+	while (j++ < params->width)
+		sum += _putchar(pad_char);
+	if (!params->minus_flag)
+	{
+		if (params->precision != UINT_MAX)
+			for (i = 0; i < pad; i++)
+				sum += _putchar(*str++);
+		else
+			sum += _puts(str);
+	}
+	return (sum);
+}
+
+/**
+ * print_percent - prints string
+ * @ap: argument pointer
+ * @params: the parameters struct
+ *
+ * Return: number chars printed
+ */
+int print_percent(va_list ap, params_t *params)
+{
+	(void)ap;
+	(void)params;
+	return (_putchar('%'));
+}
+
+/**
+ * print_S - custom format specifier
+ * @ap: argument pointer
+ * @params: the parameters struct
+ *
+ * Return: number chars printed
+ */
+int print_S(va_list ap, params_t *params)
+{
+	char *str = va_arg(ap, char *);
+	char *hex;
+	int sum = 0;
+
+	if ((int)(!str))
+		return (_puts(NULL_STRING));
+	for (; *str; str++)
+	{
+		if ((*str > 0 && *str < 32) || *str >= 127)
 		{
-			write(1, &str[0], length);
-			for (i = width - length; i > 0; i--)
-				write(1, " ", 1);
-			return (width);
+			sum += _putchar('\\');
+			sum += _putchar('x');
+			hex = convert(*str, 16, 0, params);
+			if (!hex[1])
+				sum += _putchar('0');
+			sum += _puts(hex);
 		}
 		else
 		{
-			for (i = width - length; i > 0; i--)
-				write(1, " ", 1);
-			write(1, &str[0], length);
-			return (width);
+			sum += _putchar(*str);
 		}
 	}
-
-	return (write(1, str, length));
+	return (sum);
 }
-
-/**
- * print_percent - Print percent sign
- * @types: List's arguments
- * @buffer: Buffer array to handle print
- * @flags: Evaluates effective flags
- * @width: Get width
- * @precision: Precision guidelines
- * @size: Size specifier
- *
- * Return: Number of characters printed
- */
-int print_percent(va_list types, char buffer[],
-		int flags, int width, int precision, int size)
-{
-	UNUSED(types);
-	UNUSED(buffer);
-	UNUSED(precision);
-	UNUSED(size);
-
-	if (width > 1)
-	{
-		if (flags & F_MINUS)
-		{
-			write(1, "%", 1);
-			for (; width > 1; width--)
-				write(1, " ", 1);
-		}
-		else
-		{
-			for (; width > 1; width--)
-				write(1, " ", 1);
-			write(1, "%", 1);
-		}
-		return (width);
-	}
-	return (write(1, "%", 1));
-}
-
-/**
- * print_int - Print integer
- * @types: List's arguments
- * @buffer: Buffer array to handle print
- * @flags: Evaluates effective flags
- * @width: Get width
- * @precision: Precision guidelines
- * @size: Size specifier
- *
- * Return: Number of characters printed
